@@ -5,6 +5,12 @@ import (
 	"os"
 	"log"
 	"encoding/json"
+	"flag"
+	"net"
+)
+
+var (
+	sendAddress = flag.String("sendAddress", "localhost:3001", "host:port the address to send to")
 )
 
 type Message struct {
@@ -12,8 +18,15 @@ type Message struct {
 }
 
 func main() {
+	flag.Parse()
+
+	connection, err := net.Dial("tcp", *sendAddress)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	reader := bufio.NewScanner(os.Stdin)
-	encoder := json.NewEncoder(os.Stdout)
+	encoder := json.NewEncoder(connection)
 
 	for reader.Scan() {
 		message := Message{Body: reader.Text()}
