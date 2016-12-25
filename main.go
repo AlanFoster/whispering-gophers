@@ -8,15 +8,17 @@ import (
 	"flag"
 	"net"
 	"fmt"
+	"./util"
 )
 
 var (
-	sendAddress = flag.String("sendAddress", "localhost:3001", "host:port the address to send to")
-	listenAddress = flag.String("listenAddress", "localhost:3002", "host:port the address to listen to")
+	sendAddress = flag.String("sendAddress", ":3001", "host:port the address to send to")
+	listenAddress string
 )
 
 type Message struct {
 	Body string
+	Address string
 }
 
 func main() {
@@ -27,7 +29,9 @@ func main() {
 }
 
 func listen() {
-	listener, err := net.Listen("tcp", *listenAddress)
+	listener, err := util.Listen()
+	listenAddress = listener.Addr().String()
+	log.Println("Listening on", listenAddress)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -66,7 +70,7 @@ func connect() {
 	encoder := json.NewEncoder(connection)
 
 	for reader.Scan() {
-		message := Message{Body: reader.Text()}
+		message := Message{Body: reader.Text(), Address: listenAddress}
 		err := encoder.Encode(&message)
 		if err != nil {
 			log.Fatal(err)
