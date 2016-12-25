@@ -24,7 +24,10 @@ type Message struct {
 func main() {
 	flag.Parse()
 
-	go connect()
+	messages := make(chan Message)
+	go read(messages)
+	go connect(messages)
+
 	listen()
 }
 
@@ -59,25 +62,33 @@ func serve(connection net.Conn) {
 	}
 }
 
-
-func connect() {
-	connection, err := net.Dial("tcp", *sendAddress)
-	if err != nil {
-		log.Fatal(err)
-	}
-
+func read(messages chan Message) {
 	reader := bufio.NewScanner(os.Stdin)
-	encoder := json.NewEncoder(connection)
 
 	for reader.Scan() {
 		message := Message{Body: reader.Text(), Address: listenAddress}
-		err := encoder.Encode(&message)
-		if err != nil {
-			log.Fatal(err)
-		}
+		messages <- message
 	}
 
 	if err := reader.Err(); err != nil {
 		log.Fatal(err)
+	}
+}
+
+func connect(messages chan Message) {
+	connection, err := net.Dial("tcp", *sendAddress)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+
+	encoder := json.NewEncoder(connection)
+	for message := range messages {
+		err := encoder.Encode(&message)
+
+		if err != nil {
+			log.Println(err)
+			return
+		}
 	}
 }
